@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import codecs
 import collections
+import json
 import os
 import pickle
 import random
@@ -30,15 +31,23 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("input_file", "input.txt,input2.txt,input3.txt",
+flags.DEFINE_string(
+    "bert_path", "./input",
+    "The model path of bert."
+)
+
+flags.DEFINE_string("input_file", "./input/train_data",
                     "Input raw text file (or comma-separated list of files).")
 
 flags.DEFINE_string(
-    "output_file", "ner.tfrecords",
+    "output_file", "./output/train.tf_record",
     "Output TF example file (or comma-separated list of files).")
 
 flags.DEFINE_string("vocab_file", "vocab.txt",
                     "The vocabulary file that the BERT model was trained on.")
+
+flags.DEFINE_string('data_config_path', "data.conf",
+                    'data config file, which save train and dev config')
 
 flags.DEFINE_integer("batch_size", 32, "Total batch size.")
 
@@ -126,8 +135,22 @@ def write_instance_to_example_files(instances, tokenizer, max_seq_length,
     for output_file in output_files:
         writers.append(tf.python_io.TFRecordWriter(output_file))
 
-    with codecs.open(os.path.join('label2id.pkl'), 'rb') as reader:
-        label_map = pickle.load(reader)
+    if os.path.exists(os.path.join(FLAGS.bert_path, 'label2id.pkl')):
+        # 读取label->index 的map
+        with codecs.open(os.path.join(FLAGS.bert_path, 'label2id.pkl'), 'rb') as reader:
+            label_map = pickle.load(reader)
+    else:
+        label_list = []
+        label_map = {}
+        for instance in instances:
+            label_list.extend(instance.segment_labels)
+        label_list = list(set(label_list))
+        # 1表示从1开始对label进行index化
+        for (i, label) in enumerate(label_list, 1):
+            label_map[label] = i
+        # 保存label->index 的map
+        with codecs.open(os.path.join(FLAGS.bert_path, 'label2id.pkl'), 'wb') as writer:
+            pickle.dump(label_map, writer)
 
     writer_index = 0
 
@@ -298,7 +321,16 @@ def create_instances_from_document(
     #     segment_labels.append("O")
 
     max_sequence_length_segments = get_max_sequence_length_segments(document, max_seq_length)
-    for i, segment in enumerate(max_sequence_length_segments):
+    leng = len(max_sequence_length_segments)
+    if os.path.exists(FLAGS.data_config_path):
+        with codecs.open(FLAGS.data_config_path) as fd:
+            data_config = json.load(fd)
+        data_config['num_train_size'] = leng
+    else:
+        data_config = {'num_train_size': leng}
+    with codecs.open(FLAGS.data_config_path, 'a', encoding='utf-8') as fd:
+        json.dump(data_config, fd)
+    for segment in max_sequence_length_segments:
 
         # tokens记录原始字符串转换成的列表，segment_labels记录原始实体标签
         tokens = []
@@ -398,7 +430,7 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
             output_tokens[index] = masked_token
 
             masked_lms.append(MaskedLmInstance(index=index, label=tokens[index] if not tokens[index].startswith("##")
-                                               else tokens[index][2:]))
+            else tokens[index][2:]))
 
     # 去除token前缀“##”
     for index in range(len(output_tokens)):
@@ -515,7 +547,9 @@ def load_features():
 
 
 if __name__ == "__main__":
+    # load_features()
     flags.mark_flag_as_required("input_file")
     flags.mark_flag_as_required("output_file")
     flags.mark_flag_as_required("vocab_file")
     tf.app.run()
+
