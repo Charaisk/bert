@@ -40,7 +40,7 @@ flags.DEFINE_string("input_file", "./input/train_data",
                     "Input raw text file (or comma-separated list of files).")
 
 flags.DEFINE_string(
-    "output_file", "./output/train.tf_record",
+    "output_file", "./input/train.tf_record",
     "Output TF example file (or comma-separated list of files).")
 
 flags.DEFINE_string("vocab_file", "vocab.txt",
@@ -321,15 +321,15 @@ def create_instances_from_document(
     #     segment_labels.append("O")
 
     max_sequence_length_segments = get_max_sequence_length_segments(document, max_seq_length)
-    leng = len(max_sequence_length_segments)
-    if os.path.exists(FLAGS.data_config_path):
-        with codecs.open(FLAGS.data_config_path) as fd:
-            data_config = json.load(fd)
-        data_config['num_train_size'] = leng
-    else:
-        data_config = {'num_train_size': leng}
-    with codecs.open(FLAGS.data_config_path, 'a', encoding='utf-8') as fd:
-        json.dump(data_config, fd)
+    # leng = len(max_sequence_length_segments)
+    # if os.path.exists(FLAGS.data_config_path):
+    #     with codecs.open(FLAGS.data_config_path) as fd:
+    #         data_config = json.load(fd)
+    #     data_config['num_train_size'] = leng
+    # else:
+    #     data_config = {'num_train_size': leng}
+    # with codecs.open(FLAGS.data_config_path, 'a', encoding='utf-8') as fd:
+    #     json.dump(data_config, fd)
     for segment in max_sequence_length_segments:
 
         # tokens记录原始字符串转换成的列表，segment_labels记录原始实体标签
@@ -539,9 +539,12 @@ def load_features():
             try:
                 # 获得的值直接属于graph的一部分，所以不再需要用feed_dict来喂
                 features = sess.run(next_element)
+                # input_ids = features["input_ids"][1]
+                # tokenizer = tokenization.FullTokenizer(vocab_file=FLAGS.vocab_file)
+                # input_labels = tokenizer.convert_ids_to_tokens(input_ids)
                 print()
             # 如果遍历完了数据集，则返回错误
-            except Exception:
+            except tf.errors.OutOfRangeError:
                 print("End of dataset")
                 break
 
