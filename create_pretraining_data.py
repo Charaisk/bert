@@ -111,9 +111,9 @@ def read_features_from_example_files(input_files):
         features = tf.parse_single_example(
             serialized_example,
             features={
-                'input_ids': tf.VarLenFeature(tf.int64),
-                'input_mask': tf.VarLenFeature(tf.int64),
-                'segment_ids': tf.VarLenFeature(tf.int64),
+                'input_ids': tf.FixedLenFeature([FLAGS.max_seq_length], tf.int64),
+                'input_mask': tf.FixedLenFeature([FLAGS.max_seq_length], tf.int64),
+                'segment_ids': tf.FixedLenFeature([FLAGS.max_seq_length], tf.int64),
                 'masked_lm_positions': tf.VarLenFeature(tf.int64),
                 'masked_lm_ids': tf.VarLenFeature(tf.int64),
                 'masked_lm_weights': tf.VarLenFeature(tf.float32)
@@ -550,9 +550,9 @@ def load_features():
 
 
 if __name__ == "__main__":
-    # load_features()
-    flags.mark_flag_as_required("input_file")
-    flags.mark_flag_as_required("output_file")
-    flags.mark_flag_as_required("vocab_file")
-    tf.app.run()
+    load_features()
+    # flags.mark_flag_as_required("input_file")
+    # flags.mark_flag_as_required("output_file")
+    # flags.mark_flag_as_required("vocab_file")
+    # tf.app.run()
 

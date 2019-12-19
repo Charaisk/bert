@@ -88,19 +88,19 @@ flags.DEFINE_bool(
     "models and False for cased models.")
 
 flags.DEFINE_integer(
-    "max_seq_length", 128,
+    "max_seq_length", 64,
     "The maximum total input sequence length after WordPiece tokenization. "
     "Sequences longer than this will be truncated, and sequences shorter "
     "than this will be padded.")
 
-flags.DEFINE_boolean('clean', True, 'remove the files which created by last training')
+flags.DEFINE_boolean('clean', False, 'remove the files which created by last training')
 
-flags.DEFINE_bool("do_train", True, "Whether to run training.")
+flags.DEFINE_bool("do_train", False, "Whether to run training.")
 
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
 
 flags.DEFINE_bool(
-    "do_predict", False,
+    "do_predict", True,
     "Whether to run the model in inference mode on the test set.")
 
 flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
@@ -397,7 +397,7 @@ def file_based_convert_examples_to_features(
             tf.logging.info("Writing example %d of %d" % (ex_index, len(examples)))
 
         feature = convert_single_example(ex_index, example, label_list,
-                                         max_seq_length, tokenizer, 'train')
+                                         max_seq_length, tokenizer, mode='test')
 
         def create_int_feature(values):
             f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
@@ -694,7 +694,7 @@ def main(_):
     if FLAGS.do_train:
         # 1. 将数据转化为tf_record 数据
         if data_config.get('train.tf_record_path', '') == '':
-            train_file = os.path.join(FLAGS.input_dir, "train.tf_record")
+            train_file = os.path.join(FLAGS.data_dir, "train.tf_record")
             file_based_convert_examples_to_features(
                 train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
         else:
@@ -725,7 +725,7 @@ def main(_):
             while len(eval_examples) % FLAGS.eval_batch_size != 0:
                 eval_examples.append(PaddingInputExample())
 
-        eval_file = os.path.join(FLAGS.input_dir, "eval.tf_record")
+        eval_file = os.path.join(FLAGS.data_dir, "eval.tf_record")
         file_based_convert_examples_to_features(
             eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
 
@@ -770,7 +770,7 @@ def main(_):
             while len(predict_examples) % FLAGS.predict_batch_size != 0:
                 predict_examples.append(PaddingInputExample())
 
-        predict_file = os.path.join(FLAGS.input_dir, "predict.tf_record")
+        predict_file = os.path.join(FLAGS.data_dir, "predict.tf_record")
         file_based_convert_examples_to_features(predict_examples, label_list,
                                                 FLAGS.max_seq_length, tokenizer,
                                                 predict_file)
