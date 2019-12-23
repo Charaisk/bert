@@ -135,22 +135,19 @@ def write_instance_to_example_files(instances, tokenizer, max_seq_length,
     for output_file in output_files:
         writers.append(tf.python_io.TFRecordWriter(output_file))
 
-    if os.path.exists(os.path.join(FLAGS.bert_path, 'label2id.pkl')):
-        # 读取label->index 的map
-        with codecs.open(os.path.join(FLAGS.bert_path, 'label2id.pkl'), 'rb') as reader:
-            label_map = pickle.load(reader)
-    else:
-        label_list = []
-        label_map = {}
-        for instance in instances:
-            label_list.extend(instance.segment_labels)
-        label_list = list(set(label_list))
-        # 1表示从1开始对label进行index化
-        for (i, label) in enumerate(label_list, 1):
-            label_map[label] = i
-        # 保存label->index 的map
-        with codecs.open(os.path.join(FLAGS.bert_path, 'label2id.pkl'), 'wb') as writer:
-            pickle.dump(label_map, writer)
+    # if os.path.exists(os.path.join(FLAGS.bert_path, 'label2id.pkl')):
+    # 读取label->index 的map
+    with codecs.open(os.path.join(FLAGS.bert_path, 'label2id.pkl'), 'rb') as reader:
+        label_map = pickle.load(reader)
+    # else:
+    #     label_list = ["O", "B-PER", "I-PER", "B-LOC", "I-LOC", "B-ORG", "I-ORG"]
+    #     label_map = {}
+    #     # 1表示从1开始对label进行index化
+    #     for (i, label) in enumerate(label_list, 1):
+    #         label_map[label] = i
+    #     # 保存label->index 的map
+    #     with codecs.open(os.path.join(FLAGS.bert_path, 'label2id.pkl'), 'wb') as writer:
+    #         pickle.dump(label_map, writer)
 
     writer_index = 0
 

@@ -23,6 +23,7 @@ import collections
 import csv
 import json
 import modeling
+import numpy as np
 import optimization
 import os
 import pickle
@@ -95,12 +96,12 @@ flags.DEFINE_integer(
 
 flags.DEFINE_boolean('clean', False, 'remove the files which created by last training')
 
-flags.DEFINE_bool("do_train", False, "Whether to run training.")
+flags.DEFINE_bool("do_train", True, "Whether to run training.")
 
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
 
 flags.DEFINE_bool(
-    "do_predict", True,
+    "do_predict", False,
     "Whether to run the model in inference mode on the test set.")
 
 flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
@@ -397,7 +398,7 @@ def file_based_convert_examples_to_features(
             tf.logging.info("Writing example %d of %d" % (ex_index, len(examples)))
 
         feature = convert_single_example(ex_index, example, label_list,
-                                         max_seq_length, tokenizer, mode='test')
+                                         max_seq_length, tokenizer, mode='train')
 
         def create_int_feature(values):
             f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
@@ -673,7 +674,7 @@ def main(_):
 
     model_fn = model_fn_builder(
         bert_config=bert_config,
-        num_labels=len(label_list),
+        num_labels=len(label_list) + 1,
         init_checkpoint=FLAGS.init_checkpoint,
         learning_rate=FLAGS.learning_rate,
         num_train_steps=num_train_steps,
@@ -760,6 +761,10 @@ def main(_):
                 writer.write("%s = %s\n" % (key, str(result[key])))
 
     if FLAGS.do_predict:
+        with codecs.open(os.path.join(FLAGS.bert_path, 'label2id.pkl'), 'rb') as rf:
+            label2id = pickle.load(rf)
+            id2label = {value: key for key, value in label2id.items()}
+
         predict_examples = processor.get_test_examples(FLAGS.data_dir)
         num_actual_predict_examples = len(predict_examples)
         if FLAGS.use_tpu:
@@ -801,7 +806,10 @@ def main(_):
                 output_line = "\t".join(
                     str(class_probability)
                     for class_probability in probabilities) + "\n"
-                writer.write(output_line)
+                index = np.argmax(probabilities, axis=1)
+                # writer.write(output_line)
+                res = [id2label[i+1] for i in index]
+                print(res)
                 num_written_lines += 1
         assert num_written_lines == num_actual_predict_examples
 
